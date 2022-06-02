@@ -3,7 +3,7 @@ from hashlib import sha256
 from typing import TypedDict, Final
 from datetime import datetime
 
-# 1) Build blockchain
+# Build blockchain
 TARGET_ZEROS: Final = '0000'
 
 
@@ -62,7 +62,7 @@ def is_chain_valid(chain: list[Block]) -> bool:
             return False
 
         block_index += 1
-        return True
+    return True
 
 
 def proof_of_work(prev_block_nonce: int) -> int:
