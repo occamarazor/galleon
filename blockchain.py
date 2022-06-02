@@ -16,8 +16,13 @@ class Block(TypedDict):
     prev_hash: str
 
 
-class Response(TypedDict, Block):
+class MineBlockResponse(TypedDict, Block):
     message: str
+
+
+class GetBlockchainResponse(TypedDict):
+    blockchain: list[Block]
+    length: int
 
 
 def calc_block_hash(block_nonce: int, prev_block_nonce: int) -> str:
@@ -113,12 +118,12 @@ def create_blockchain() -> list[Block]:
 
 # 2) Create webapp & blockchain
 app = Flask(__name__)
-blockchain = create_blockchain()
+blockchain: list[Block] = create_blockchain()
 
 
 # 3) Mine a new block
-@app.route('/mine_new_block', methods=['GET'])
-def mine_new_block():
+@app.route('/mine_block', methods=['GET'])
+def mine_block():
     prev_block: Block = blockchain[-1]
     prev_block_nonce: int = prev_block['nonce']
     new_block_nonce: int = proof_of_work(prev_block_nonce)
@@ -126,7 +131,21 @@ def mine_new_block():
     new_block: Block = create_block(len(blockchain), new_block_nonce, prev_block_hash)
     blockchain.append(new_block)
 
-    response: Response = {key: val for key, val in new_block}
+    response: MineBlockResponse = {k: v for k, v in new_block.items()}
     response['message'] = 'Yay, you just mined a block!'
 
     return jsonify(response), 200
+
+
+# 4) Request the whole blockchain
+@app.route('/get_blockchain', methods=['GET'])
+def get_blockchain():
+    response: GetBlockchainResponse = {'blockchain': blockchain,
+                                         'length': len(blockchain)
+                                       }
+
+    return jsonify(response), 200
+
+
+# 5) Run flask app
+app.run()
