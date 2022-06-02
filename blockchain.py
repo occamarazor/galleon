@@ -9,7 +9,6 @@ from flask import Flask, jsonify
 TARGET_ZEROS: Final = '0000'
 
 
-# Block annotation
 class Block(TypedDict):
     index: int
     timestamp: str
@@ -17,109 +16,117 @@ class Block(TypedDict):
     prev_hash: str
 
 
-# Blockchain
-class Blockchain:
-    def __init__(self):
-        # Create init hain
-        self.chain: list[Block] = []
-        # Create genesis block
-        self.create_block(new_block_nonce=1, prev_block_hash='0')
+class Response(TypedDict, Block):
+    message: str
 
-    def calc_block_hash(self, block_nonce: int, prev_block_nonce: int) -> str:
-        """ Computes block hash solving the cryptographic puzzle
-        :param block_nonce: block nonce
-        :param prev_block_nonce: previous block nonce
-        :return: block hash solving the cryptographic puzzle
-        """
-        return sha256(f'{block_nonce ** 2 - prev_block_nonce ** 2}'.encode()).hexdigest()
 
-    def create_block(self, new_block_nonce: int, prev_block_hash: str) -> Block:
-        """Creates a new block with data & appends it to the chain
-        :param new_block_nonce: new block nonce
-        :param prev_block_hash: previous block hash
-        :return: new created block
-        """
-        new_block: Block = {'index': len(self.chain) + 1,
-                            'timestamp': f'{datetime.now()}',
-                            'nonce': new_block_nonce,
-                            'prev_hash': prev_block_hash,
-                            }
-        self.chain.append(new_block)
-        return new_block
+def calc_block_hash(block_nonce: int, prev_block_nonce: int) -> str:
+    """ Computes possible block hash solving a simple cryptographic puzzle
+    :param block_nonce: possible golden nonce
+    :param prev_block_nonce: previous block nonce
+    :return: possible block hash
+    """
+    return sha256(f'{block_nonce ** 2 - prev_block_nonce ** 2}'.encode()).hexdigest()
 
-    def get_prev_block(self):
-        return self.chain[-1]
 
-    def proof_of_work(self, prev_block_nonce: int) -> int:
-        """ Solves the cryptographic puzzle
-        :param prev_block_nonce: previous block nonce
-        :return: new block nonce
-        """
-        new_block_nonce: int = 1
-        nonce_is_valid: bool = False
+def hash_block(block: Block) -> str:
+    """ Hashes entire block
+    :param block: block
+    :return: block hash
+    """
+    encoded_block = json.dumps(block, sort_keys=True).encode()
+    return sha256(encoded_block).hexdigest()
 
-        # Compute hashes until golden nonce found
-        while nonce_is_valid is False:
-            possible_hash: str = self.calc_block_hash(new_block_nonce, prev_block_nonce)
 
-            if possible_hash[:4] == TARGET_ZEROS:
-                nonce_is_valid = True
-            else:
-                new_block_nonce += 1
+def is_chain_valid(chain: list[Block]) -> bool:
+    """ Validates the entire blockchain
+    :param chain: blockchain
+    :return: boolean validation result
+    """
+    block_index: int = 1
 
-        return new_block_nonce
+    # Validate each block
+    while block_index < len(chain):
+        # Prev & current blocks hashes validation
+        prev_block: Block = chain[block_index - 1]
+        current_block: Block = chain[block_index]
 
-    def hash_block(self, block: Block) -> str:
-        """ Computes entire block hash
-        :param block: block
-        :return: entire block hash
-        """
-        encoded_block = json.dumps(block, sort_keys=True).encode()
-        return sha256(encoded_block).hexdigest()
+        if hash_block(prev_block) != current_block['prev_hash']:
+            return False
 
-    def is_chain_valid(self, chain: list[Block]) -> bool:
-        """ Validates the entire blockchain
-        :param chain: blockchain
-        :return: boolean validation result
-        """
-        block_index: int = 1
+        # Current block hash validation
+        prev_block_nonce: int = prev_block['nonce']
+        current_block_nonce: int = current_block['nonce']
+        current_block_hash: str = calc_block_hash(current_block_nonce, prev_block_nonce)
 
-        # Validate each block
-        while block_index < len(chain):
-            # Prev & current blocks hashes validation
-            prev_block: Block = chain[block_index - 1]
-            current_block: Block = chain[block_index]
+        if current_block_hash[:4] != TARGET_ZEROS:
+            return False
 
-            if self.hash_block(prev_block) != current_block['prev_hash']:
-                return False
+        block_index += 1
+        return True
 
-            # Current block hash validation
-            prev_block_nonce = prev_block['nonce']
-            current_block_nonce = current_block['nonce']
-            current_block_hash: str = self.calc_block_hash(current_block_nonce, prev_block_nonce)
 
-            if current_block_hash[:4] != TARGET_ZEROS:
-                return False
+def proof_of_work(prev_block_nonce: int) -> int:
+    """ Solves the cryptographic puzzle
+    :param prev_block_nonce: previous block nonce
+    :return: new block nonce
+    """
+    new_block_nonce: int = 1
+    nonce_is_valid: bool = False
 
-            block_index += 1
-            return True
+    # Compute hashes until golden nonce found
+    while nonce_is_valid is False:
+        possible_hash: str = calc_block_hash(new_block_nonce, prev_block_nonce)
+
+        if possible_hash[:4] == TARGET_ZEROS:
+            nonce_is_valid = True
+        else:
+            new_block_nonce += 1
+
+    return new_block_nonce
+
+
+def create_block(blockchain_length: int, new_block_nonce: int, prev_block_hash: str) -> Block:
+    """ Creates a new block with data & appends it to the chain
+    :param blockchain_length: blockchain length
+    :param new_block_nonce: new block nonce
+    :param prev_block_hash: previous block hash
+    :return:
+    """
+    new_block: Block = {'index': blockchain_length + 1,
+                        'timestamp': f'{datetime.now()}',
+                        'nonce': new_block_nonce,
+                        'prev_hash': prev_block_hash,
+                        }
+    return new_block
+
+
+def create_blockchain() -> list[Block]:
+    """ Creates a new blockchain with genesis block
+    :return: blockchain
+    """
+    new_blockchain: list[Block] = []
+    genesis_block: Block = create_block(len(new_blockchain), new_block_nonce=1, prev_block_hash='0')
+    new_blockchain.append(genesis_block)
+    return new_blockchain
 
 
 # 2) Create webapp & blockchain
 app = Flask(__name__)
-blockchain = Blockchain()
+blockchain = create_blockchain()
 
 
 # 3) Mine a new block
 @app.route('/mine_new_block', methods=['GET'])
 def mine_new_block():
-    prev_block = blockchain.get_prev_block()
-    prev_block_nonce = prev_block['nonce']
-    new_block_nonce = blockchain.proof_of_work(prev_block_nonce)
-    prev_block_hash = blockchain.hash_block(prev_block)
-    new_block = blockchain.create_block(new_block_nonce, prev_block_hash)
+    prev_block: Block = blockchain[-1]
+    prev_block_nonce: int = prev_block['nonce']
+    new_block_nonce: int = proof_of_work(prev_block_nonce)
+    prev_block_hash: str = hash_block(prev_block)
+    new_block: Block = create_block(len(blockchain), new_block_nonce, prev_block_hash)
+    blockchain.append(new_block)
 
-    response = {key: val for key, val in new_block}
+    response: Response = {key: val for key, val in new_block}
     response['message'] = 'Yay, you just mined a block!'
 
     return jsonify(response), 200
