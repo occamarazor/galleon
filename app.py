@@ -16,7 +16,7 @@ def mine_block():
     prev_block_nonce: int = prev_block['nonce']
     new_block_nonce: int = proof_of_work(prev_block_nonce)
     prev_block_hash: str = hash_block(prev_block)
-    new_block: Block = create_block(len(blockchain), new_block_nonce, prev_block_hash)
+    new_block: Block = create_block(len(blockchain), prev_block_hash, new_block_nonce)
     blockchain.append(new_block)
 
     return jsonify(new_block), SUCCESS_REQUEST_STATUS

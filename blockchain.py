@@ -5,13 +5,15 @@ from datetime import datetime
 
 # Build blockchain
 TARGET_ZEROS: Final = '0000'
+INITIAL_PREV_BLOCK_HASH = '0'
+INITIAL_BLOCK_NONCE = 1
 
 
 class Block(TypedDict):
-    index: int
     timestamp: str
-    nonce: int
+    height: int
     prev_hash: str
+    nonce: int
 
 
 class GetBlockchainResponse(TypedDict):
@@ -42,13 +44,13 @@ def is_chain_valid(chain: list[Block]) -> bool:
     :param chain: blockchain
     :return: boolean validation result
     """
-    block_index: int = 1
+    block_height: int = 1
 
     # Validate each block
-    while block_index < len(chain):
+    while block_height < len(chain):
         # Prev & current blocks hashes validation
-        prev_block: Block = chain[block_index - 1]
-        current_block: Block = chain[block_index]
+        prev_block: Block = chain[block_height - 1]
+        current_block: Block = chain[block_height]
 
         if hash_block(prev_block) != current_block['prev_hash']:
             return False
@@ -61,7 +63,7 @@ def is_chain_valid(chain: list[Block]) -> bool:
         if current_block_hash[:4] != TARGET_ZEROS:
             return False
 
-        block_index += 1
+        block_height += 1
     return True
 
 
@@ -70,7 +72,7 @@ def proof_of_work(prev_block_nonce: int) -> int:
     :param prev_block_nonce: previous block nonce
     :return: new block nonce
     """
-    new_block_nonce: int = 1
+    new_block_nonce: int = INITIAL_BLOCK_NONCE
     nonce_is_valid: bool = False
 
     # Compute hashes until golden nonce found
@@ -85,17 +87,17 @@ def proof_of_work(prev_block_nonce: int) -> int:
     return new_block_nonce
 
 
-def create_block(blockchain_length: int, new_block_nonce: int, prev_block_hash: str) -> Block:
+def create_block(blockchain_length: int, prev_block_hash: str, new_block_nonce: int) -> Block:
     """ Creates a new block with data & appends it to the chain
     :param blockchain_length: blockchain length
-    :param new_block_nonce: new block nonce
     :param prev_block_hash: previous block hash
-    :return:
+    :param new_block_nonce: new block nonce
+    :return: new block
     """
-    new_block: Block = {'index': blockchain_length + 1,
-                        'timestamp': f'{datetime.now()}',
-                        'nonce': new_block_nonce,
+    new_block: Block = {'timestamp': f'{datetime.now()}',
+                        'height': blockchain_length + 1,
                         'prev_hash': prev_block_hash,
+                        'nonce': new_block_nonce,
                         }
     return new_block
 
@@ -105,6 +107,6 @@ def create_blockchain() -> list[Block]:
     :return: blockchain
     """
     new_blockchain: list[Block] = []
-    genesis_block: Block = create_block(len(new_blockchain), new_block_nonce=1, prev_block_hash='0')
+    genesis_block: Block = create_block(len(new_blockchain), INITIAL_PREV_BLOCK_HASH, INITIAL_BLOCK_NONCE)
     new_blockchain.append(genesis_block)
     return new_blockchain
