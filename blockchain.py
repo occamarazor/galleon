@@ -9,11 +9,18 @@ INITIAL_PREV_BLOCK_HASH = '0'
 INITIAL_BLOCK_NONCE = 1
 
 
+class Transaction(TypedDict):
+    sender: str
+    receiver: str
+    amount: float
+
+
 class Block(TypedDict):
     timestamp: str
     height: int
     prev_hash: str
     nonce: int
+    transactions: list[Transaction]
 
 
 class GetBlockchainResponse(TypedDict):
@@ -87,19 +94,23 @@ def proof_of_work(prev_block_nonce: int) -> int:
     return new_block_nonce
 
 
-def create_block(blockchain_length: int, prev_block_hash: str, new_block_nonce: int) -> Block:
+def create_block(blockchain_length: int,
+                 prev_block_hash: str,
+                 new_block_nonce: int,
+                 transactions: list[Transaction]) -> Block:
     """ Creates a new block with data & appends it to the chain
     :param blockchain_length: blockchain length
     :param prev_block_hash: previous block hash
     :param new_block_nonce: new block nonce
+    :param transactions: block transactions
     :return: new block
     """
-    new_block: Block = {'timestamp': f'{datetime.now()}',
-                        'height': blockchain_length + 1,
-                        'prev_hash': prev_block_hash,
-                        'nonce': new_block_nonce,
-                        }
-    return new_block
+    return {'timestamp': f'{datetime.now()}',
+            'height': blockchain_length + 1,
+            'prev_hash': prev_block_hash,
+            'nonce': new_block_nonce,
+            'transactions': transactions
+            }
 
 
 def create_blockchain() -> list[Block]:
@@ -107,6 +118,7 @@ def create_blockchain() -> list[Block]:
     :return: blockchain
     """
     new_blockchain: list[Block] = []
-    genesis_block: Block = create_block(len(new_blockchain), INITIAL_PREV_BLOCK_HASH, INITIAL_BLOCK_NONCE)
+    transactions: list[Transaction] = []
+    genesis_block: Block = create_block(len(new_blockchain), INITIAL_PREV_BLOCK_HASH, INITIAL_BLOCK_NONCE, transactions)
     new_blockchain.append(genesis_block)
     return new_blockchain

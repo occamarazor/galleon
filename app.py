@@ -1,13 +1,26 @@
 from flask import Flask, jsonify
-from blockchain import Block, GetBlockchainResponse, create_blockchain, create_block, proof_of_work, is_chain_valid, \
-    hash_block
+from blockchain import Transaction, Block, GetBlockchainResponse, create_blockchain, create_block, proof_of_work, \
+    is_chain_valid, hash_block
 
 SUCCESS_REQUEST_STATUS = 200
 
 # Create webapp & blockchain
 app = Flask(__name__)
 blockchain: list[Block] = create_blockchain()
-
+# TODO: fake data
+transactions: list[Transaction] = [{'sender': 'Dan',
+                                    'receiver': 'Max',
+                                    'amount': 1.1
+                                    },
+                                   {'sender': 'Bill',
+                                    'receiver': 'Max',
+                                    'amount': 0.3
+                                    },
+                                   {'sender': 'Max',
+                                    'receiver': 'Max',
+                                    'amount': 0.22
+                                    }
+                                   ]
 
 # Mine a new block
 @app.route('/mine_block', methods=['GET'])
@@ -16,7 +29,7 @@ def mine_block():
     prev_block_nonce: int = prev_block['nonce']
     new_block_nonce: int = proof_of_work(prev_block_nonce)
     prev_block_hash: str = hash_block(prev_block)
-    new_block: Block = create_block(len(blockchain), prev_block_hash, new_block_nonce)
+    new_block: Block = create_block(len(blockchain), prev_block_hash, new_block_nonce, transactions)
     blockchain.append(new_block)
 
     return jsonify(new_block), SUCCESS_REQUEST_STATUS
