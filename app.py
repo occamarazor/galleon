@@ -1,7 +1,7 @@
 from typing import TypedDict, Final
 from flask import Flask, jsonify, request
 from blockchain import SUCCESS_REQUEST_STATUS, BAD_REQUEST_STATUS, MINER_NAME, BLOCK_REWARD, Transaction, Block,\
-    create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block, create_transaction
+    create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block, create_transaction, create_node
 from uuid import uuid4
 
 BLOCK_TRANSACTIONS: Final = 10
@@ -21,10 +21,11 @@ class ValidateBlockchainResponse(TypedDict):
 app = Flask(__name__)
 
 # TODO: each node has its own address & mempool
-# Create first node address, blockchain & mempool
+# Create first node address, blockchain, mempool, nodes
 node_address: str = str(uuid4()).replace('-', '')
 blockchain: list[Block] = create_blockchain(node_address)
 blockchain_mempool: list[Transaction] = []
+blockchain_nodes: list[str] = []
 
 
 # Mine a new block
@@ -78,12 +79,28 @@ def add_transaction():
 
     if all(key in transactions_json for key in TRANSACTION_KEYS):
         transaction: Transaction = create_transaction(transactions_json['sender'],
-                                         transactions_json['receiver'],
-                                         transactions_json['amount'])
+                                                      transactions_json['receiver'],
+                                                      transactions_json['amount'])
         blockchain_mempool.append(transaction)
         return jsonify(transaction), SUCCESS_REQUEST_STATUS
     else:
-        return 'Some transaction props are missing', BAD_REQUEST_STATUS
+        return 'Transaction data is invalid', BAD_REQUEST_STATUS
+
+
+# Connect new nodes
+@app.route('/connect_nodes', methods=['POST'])
+def connect_nodes():
+    global blockchain_nodes
+    node_urls_json = request.get_json()
+    node_urls = node_urls_json.get('nodes')
+
+    if len(node_urls):
+        new_nodes: list[str] = [create_node(node_url) for node_url in node_urls]
+        blockchain_nodes.extend(new_nodes)
+        blockchain_nodes = list(set(blockchain_nodes))
+        return jsonify(new_nodes), SUCCESS_REQUEST_STATUS
+    else:
+        return 'Nodes data is invalid', BAD_REQUEST_STATUS
 
 
 # Run flask app

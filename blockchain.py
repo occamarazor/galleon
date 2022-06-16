@@ -162,6 +162,7 @@ def replace_chain(current_chain: list[Block], chain_nodes: set[str]) -> tuple[bo
     max_chain_length: int = len(current_chain)
 
     for node in chain_nodes:
+        # TODO: protocol?
         response: Response = requests.get(f'http://{node}/get_blockchain')
 
         if response.status_code == SUCCESS_REQUEST_STATUS:
