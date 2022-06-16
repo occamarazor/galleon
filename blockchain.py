@@ -9,8 +9,9 @@ from requests import Response
 
 # Build blockchain
 TARGET_ZEROS: Final = '0000'
-INITIAL_PREV_BLOCK_HASH = '0'
-INITIAL_BLOCK_NONCE = 1
+INITIAL_PREV_BLOCK_HASH: Final = '0'
+INITIAL_BLOCK_NONCE: Final = 1
+SUCCESS_REQUEST_STATUS: Final = 200
 
 
 class Transaction(TypedDict):
@@ -97,7 +98,7 @@ def create_block(blockchain_length: int,
                  prev_block_hash: str,
                  new_block_nonce: int,
                  transactions: list[Transaction]) -> Block:
-    """ Creates a new block with data & appends it to the chain
+    """ Creates a new block with data
     :param blockchain_length: blockchain length
     :param prev_block_hash: previous block hash
     :param new_block_nonce: new block nonce
@@ -125,6 +126,19 @@ def create_blockchain() -> list[Block]:
 
 
 # Crypto stuff
+def create_transaction(sender: str, receiver: str, amount: float) -> Transaction:
+    """ Creates a new transaction with data
+    :param sender: transaction sender
+    :param receiver: transaction receiver
+    :param amount: transaction amount
+    :return: new transaction
+    """
+    return {'sender': sender,
+            'receiver': receiver,
+            'amount': amount
+            }
+
+
 def create_node(url: str) -> str:
     """ Creates a node netloc from a url address
     :param url: url address
@@ -146,7 +160,7 @@ def replace_chain(current_chain: list[Block], chain_nodes: set[str]) -> tuple[bo
     for node in chain_nodes:
         response: Response = requests.get(f'http://{node}/get_blockchain')
 
-        if response.status_code == 200:
+        if response.status_code == SUCCESS_REQUEST_STATUS:
             node_chain_length: int = response.json()['length']
             node_chain: list[Block] = response.json()['blockchain']
 

@@ -1,9 +1,12 @@
-from typing import TypedDict
-
+from typing import TypedDict, Final
 from flask import Flask, jsonify
-from blockchain import Transaction, Block, create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block
+from blockchain import SUCCESS_REQUEST_STATUS, Transaction, Block, create_blockchain, create_block, proof_of_work,\
+    is_chain_valid, hash_block, create_transaction
 
-SUCCESS_REQUEST_STATUS = 200
+from uuid import uuid4
+
+MINER_NAME: Final = 'Miner'
+MINER_REWARD: Final = 1
 
 
 class GetBlockchainResponse(TypedDict):
@@ -17,21 +20,14 @@ class ValidateBlockchainResponse(TypedDict):
 
 # Create webapp & blockchain
 app = Flask(__name__)
+
+# Create first node address
+node_address = str(uuid4()).replace('-', '')
+
+# Create blockchain & mempool
 blockchain: list[Block] = create_blockchain()
-# TODO: fake data
-transactions: list[Transaction] = [{'sender': 'Dan',
-                                    'receiver': 'Max',
-                                    'amount': 1.1
-                                    },
-                                   {'sender': 'Bill',
-                                    'receiver': 'Max',
-                                    'amount': 0.3
-                                    },
-                                   {'sender': 'Max',
-                                    'receiver': 'Max',
-                                    'amount': 0.22
-                                    }
-                                   ]
+blockchain_mempool: list[Transaction] = []
+
 
 # Mine a new block
 @app.route('/mine_block', methods=['GET'])
@@ -40,7 +36,12 @@ def mine_block():
     prev_block_nonce: int = prev_block['nonce']
     new_block_nonce: int = proof_of_work(prev_block_nonce)
     prev_block_hash: str = hash_block(prev_block)
-    new_block: Block = create_block(len(blockchain), prev_block_hash, new_block_nonce, transactions)
+
+    coinbase_transaction: Transaction = create_transaction(node_address, MINER_NAME, MINER_REWARD)
+    blockchain_mempool.append(coinbase_transaction)
+
+    # TODO: select block transactions from mempool
+    new_block: Block = create_block(len(blockchain), prev_block_hash, new_block_nonce, blockchain_mempool)
     blockchain.append(new_block)
 
     return jsonify(new_block), SUCCESS_REQUEST_STATUS
