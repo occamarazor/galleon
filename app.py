@@ -1,11 +1,12 @@
 import json
-from typing import TypedDict
+from typing import TypedDict, Final
 from flask import Flask, jsonify, request
-from blockchain import SUCCESS_REQUEST_STATUS, BAD_REQUEST_STATUS, MINER_NAME, BLOCK_REWARD, BLOCK_TRANSACTIONS,\
-    Transaction, Block, create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block, create_transaction
+from blockchain import SUCCESS_REQUEST_STATUS, BAD_REQUEST_STATUS, MINER_NAME, BLOCK_REWARD, Transaction, Block,\
+    create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block, create_transaction
 
 from uuid import uuid4
 
+BLOCK_TRANSACTIONS: Final = 10
 TRANSACTION_KEYS = ['sender', 'receiver', 'amount']
 
 

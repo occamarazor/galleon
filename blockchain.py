@@ -15,7 +15,6 @@ BAD_REQUEST_STATUS: Final = 400
 
 MINER_NAME: Final = 'Miner'
 BLOCK_REWARD: Final = 1
-BLOCK_TRANSACTIONS: Final = 10
 
 
 # Build blockchain
