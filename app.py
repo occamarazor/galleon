@@ -1,9 +1,12 @@
-from typing import TypedDict, Final
-from flask import Flask, jsonify
-from blockchain import SUCCESS_REQUEST_STATUS, MINER_NAME, BLOCK_REWARD, BLOCK_TRANSACTIONS, Transaction, Block,\
-    create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block, create_transaction
+import json
+from typing import TypedDict
+from flask import Flask, jsonify, request
+from blockchain import SUCCESS_REQUEST_STATUS, BAD_REQUEST_STATUS, MINER_NAME, BLOCK_REWARD, BLOCK_TRANSACTIONS,\
+    Transaction, Block, create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block, create_transaction
 
 from uuid import uuid4
+
+TRANSACTION_KEYS = ['sender', 'receiver', 'amount']
 
 
 class GetBlockchainResponse(TypedDict):
@@ -64,6 +67,21 @@ def validate_blockchain():
         response: ValidateBlockchainResponse = {'message': 'Blockchain invalid'}
 
     return jsonify(response), SUCCESS_REQUEST_STATUS
+
+
+# Adds transaction to mempool
+@app.route('/add_transaction', methods=['POST'])
+def add_transaction():
+    transactions_json = request.get_json()
+
+    if all(key in transactions_json for key in TRANSACTION_KEYS):
+        transaction: Transaction = create_transaction(transactions_json['sender'],
+                                         transactions_json['receiver'],
+                                         transactions_json['amount'])
+        blockchain_mempool.append(transaction)
+        return jsonify(transaction), SUCCESS_REQUEST_STATUS
+    else:
+        return 'Some transaction props are missing', BAD_REQUEST_STATUS
 
 
 # Run flask app
