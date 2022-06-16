@@ -16,6 +16,7 @@ MINER_NAME: Final = 'Miner'
 BLOCK_REWARD: Final = 1
 BLOCK_TRANSACTIONS: Final = 10
 
+
 # Build blockchain
 class Transaction(TypedDict):
     sender: str
@@ -116,15 +117,13 @@ def create_block(blockchain_length: int,
             }
 
 
-def create_blockchain() -> list[Block]:
+def create_blockchain(node_address: str) -> list[Block]:
     """ Creates a new blockchain with genesis block
+    :param node_address: node address
     :return: blockchain
     """
     new_blockchain: list[Block] = []
-    # TODO: init node address
-    coinbase_transaction: Transaction = create_transaction('111', MINER_NAME, BLOCK_REWARD)
-    # TODO: init nodes
-    nodes: set[str] = set()
+    coinbase_transaction: Transaction = create_transaction(node_address, MINER_NAME, BLOCK_REWARD)
     genesis_block: Block = create_block(len(new_blockchain), INITIAL_PREV_BLOCK_HASH, INITIAL_BLOCK_NONCE, [coinbase_transaction])
     new_blockchain.append(genesis_block)
     return new_blockchain

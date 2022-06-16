@@ -19,11 +19,11 @@ class ValidateBlockchainResponse(TypedDict):
 app = Flask(__name__)
 
 # Create first node address
-node_address = str(uuid4()).replace('-', '')
+node_address: str = str(uuid4()).replace('-', '')
 
 # Create blockchain & mempool
-blockchain: list[Block] = create_blockchain()
 blockchain_mempool: list[Transaction] = []
+blockchain: list[Block] = create_blockchain(node_address)
 
 
 # Mine a new block
