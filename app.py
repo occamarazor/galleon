@@ -1,9 +1,7 @@
-import json
 from typing import TypedDict, Final
 from flask import Flask, jsonify, request
 from blockchain import SUCCESS_REQUEST_STATUS, BAD_REQUEST_STATUS, MINER_NAME, BLOCK_REWARD, Transaction, Block,\
     create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block, create_transaction
-
 from uuid import uuid4
 
 BLOCK_TRANSACTIONS: Final = 10
@@ -32,6 +30,7 @@ blockchain_mempool: list[Transaction] = []
 # Mine a new block
 @app.route('/mine_block', methods=['GET'])
 def mine_block():
+    global blockchain_mempool
     prev_block: Block = blockchain[-1]
     prev_block_nonce: int = prev_block['nonce']
     new_block_nonce: int = proof_of_work(prev_block_nonce)
@@ -41,8 +40,9 @@ def mine_block():
     block_transactions = [coinbase_transaction]
     block_transactions.extend(blockchain_mempool[:BLOCK_TRANSACTIONS])
 
-    new_block: Block = create_block(len(blockchain), prev_block_hash, new_block_nonce, blockchain_mempool)
+    new_block: Block = create_block(len(blockchain), prev_block_hash, new_block_nonce, block_transactions)
     blockchain.append(new_block)
+    blockchain_mempool = blockchain_mempool[BLOCK_TRANSACTIONS:]
 
     return jsonify(new_block), SUCCESS_REQUEST_STATUS
 
@@ -70,6 +70,7 @@ def validate_blockchain():
     return jsonify(response), SUCCESS_REQUEST_STATUS
 
 
+# TODO: Transaction stuff
 # Adds transaction to mempool
 @app.route('/add_transaction', methods=['POST'])
 def add_transaction():

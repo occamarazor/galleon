@@ -129,7 +129,7 @@ def create_blockchain(node_address: str) -> list[Block]:
     return new_blockchain
 
 
-# Crypto stuff
+# TODO: Transaction stuff
 def create_transaction(sender: str, receiver: str, amount: float) -> Transaction:
     """ Creates a new transaction with data
     :param sender: transaction sender
