@@ -4,6 +4,8 @@ from typing import TypedDict, Final
 from datetime import datetime
 
 from urllib.parse import urlparse
+import requests
+from requests import Response
 
 # Build blockchain
 TARGET_ZEROS: Final = '0000'
@@ -23,11 +25,6 @@ class Block(TypedDict):
     prev_hash: str
     nonce: int
     transactions: list[Transaction]
-
-
-class GetBlockchainResponse(TypedDict):
-    blockchain: list[Block]
-    length: int
 
 
 def calc_block_hash(block_nonce: int, prev_block_nonce: int) -> str:
@@ -127,6 +124,7 @@ def create_blockchain() -> list[Block]:
     return new_blockchain
 
 
+# Crypto stuff
 def create_node(url: str) -> str:
     """ Creates a node netloc from a url address
     :param url: url address
@@ -134,3 +132,28 @@ def create_node(url: str) -> str:
     """
     parsed_url = urlparse(url)
     return parsed_url.netloc
+
+
+def replace_chain(current_chain: list[Block], chain_nodes: set[str]) -> tuple[bool, list[Block]]:
+    """ Gets longest chain from all nodes
+    :param current_chain: current blockchain
+    :param chain_nodes: current blockchain nodes
+    :return: replace status & current blockchain longest chain
+    """
+    longest_chain: list[Block] | None = None
+    max_chain_length: int = len(current_chain)
+
+    for node in chain_nodes:
+        response: Response = requests.get(f'http://{node}/get_blockchain')
+
+        if response.status_code == 200:
+            node_chain_length: int = response.json()['length']
+            node_chain: list[Block] = response.json()['blockchain']
+
+            if node_chain_length > max_chain_length and is_chain_valid(node_chain):
+                max_chain_length = node_chain_length
+                longest_chain = node_chain
+
+    if longest_chain:
+        return True, longest_chain
+    return False, longest_chain

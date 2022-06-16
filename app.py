@@ -1,8 +1,19 @@
+from typing import TypedDict
+
 from flask import Flask, jsonify
-from blockchain import Transaction, Block, GetBlockchainResponse, create_blockchain, create_block, proof_of_work, \
-    is_chain_valid, hash_block
+from blockchain import Transaction, Block, create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block
 
 SUCCESS_REQUEST_STATUS = 200
+
+
+class GetBlockchainResponse(TypedDict):
+    blockchain: list[Block]
+    length: int
+
+
+class ValidateBlockchainResponse(TypedDict):
+    message: str
+
 
 # Create webapp & blockchain
 app = Flask(__name__)
@@ -51,9 +62,9 @@ def validate_blockchain():
     is_blockchain_valid: bool = is_chain_valid(blockchain)
 
     if is_blockchain_valid:
-        response = {'message': 'Blockchain valid'}
+        response: ValidateBlockchainResponse = {'message': 'Blockchain valid'}
     else:
-        response = {'message': 'Blockchain invalid'}
+        response: ValidateBlockchainResponse = {'message': 'Blockchain invalid'}
 
     return jsonify(response), SUCCESS_REQUEST_STATUS
 
