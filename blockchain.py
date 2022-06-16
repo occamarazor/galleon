@@ -3,6 +3,8 @@ from hashlib import sha256
 from typing import TypedDict, Final
 from datetime import datetime
 
+from urllib.parse import urlparse
+
 # Build blockchain
 TARGET_ZEROS: Final = '0000'
 INITIAL_PREV_BLOCK_HASH = '0'
@@ -119,6 +121,16 @@ def create_blockchain() -> list[Block]:
     """
     new_blockchain: list[Block] = []
     transactions: list[Transaction] = []
+    nodes: set[str] = set()
     genesis_block: Block = create_block(len(new_blockchain), INITIAL_PREV_BLOCK_HASH, INITIAL_BLOCK_NONCE, transactions)
     new_blockchain.append(genesis_block)
     return new_blockchain
+
+
+def create_node(url: str) -> str:
+    """ Creates a node netloc from a url address
+    :param url: url address
+    :return: node netloc
+    """
+    parsed_url = urlparse(url)
+    return parsed_url.netloc
