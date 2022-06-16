@@ -7,13 +7,16 @@ from urllib.parse import urlparse
 import requests
 from requests import Response
 
-# Build blockchain
 TARGET_ZEROS: Final = '0000'
 INITIAL_PREV_BLOCK_HASH: Final = '0'
 INITIAL_BLOCK_NONCE: Final = 1
 SUCCESS_REQUEST_STATUS: Final = 200
 
+MINER_NAME: Final = 'Miner'
+BLOCK_REWARD: Final = 1
+BLOCK_TRANSACTIONS: Final = 10
 
+# Build blockchain
 class Transaction(TypedDict):
     sender: str
     receiver: str
@@ -118,9 +121,11 @@ def create_blockchain() -> list[Block]:
     :return: blockchain
     """
     new_blockchain: list[Block] = []
-    transactions: list[Transaction] = []
+    # TODO: init node address
+    coinbase_transaction: Transaction = create_transaction('111', MINER_NAME, BLOCK_REWARD)
+    # TODO: init nodes
     nodes: set[str] = set()
-    genesis_block: Block = create_block(len(new_blockchain), INITIAL_PREV_BLOCK_HASH, INITIAL_BLOCK_NONCE, transactions)
+    genesis_block: Block = create_block(len(new_blockchain), INITIAL_PREV_BLOCK_HASH, INITIAL_BLOCK_NONCE, [coinbase_transaction])
     new_blockchain.append(genesis_block)
     return new_blockchain
 

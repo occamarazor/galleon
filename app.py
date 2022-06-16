@@ -1,12 +1,9 @@
 from typing import TypedDict, Final
 from flask import Flask, jsonify
-from blockchain import SUCCESS_REQUEST_STATUS, Transaction, Block, create_blockchain, create_block, proof_of_work,\
-    is_chain_valid, hash_block, create_transaction
+from blockchain import SUCCESS_REQUEST_STATUS, MINER_NAME, BLOCK_REWARD, BLOCK_TRANSACTIONS, Transaction, Block,\
+    create_blockchain, create_block, proof_of_work, is_chain_valid, hash_block, create_transaction
 
 from uuid import uuid4
-
-MINER_NAME: Final = 'Miner'
-MINER_REWARD: Final = 1
 
 
 class GetBlockchainResponse(TypedDict):
@@ -37,10 +34,10 @@ def mine_block():
     new_block_nonce: int = proof_of_work(prev_block_nonce)
     prev_block_hash: str = hash_block(prev_block)
 
-    coinbase_transaction: Transaction = create_transaction(node_address, MINER_NAME, MINER_REWARD)
-    blockchain_mempool.append(coinbase_transaction)
+    coinbase_transaction: Transaction = create_transaction(node_address, MINER_NAME, BLOCK_REWARD)
+    block_transactions = [coinbase_transaction]
+    block_transactions.extend(blockchain_mempool[:BLOCK_TRANSACTIONS])
 
-    # TODO: select block transactions from mempool
     new_block: Block = create_block(len(blockchain), prev_block_hash, new_block_nonce, blockchain_mempool)
     blockchain.append(new_block)
 
