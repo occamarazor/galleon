@@ -2,26 +2,15 @@ import json
 from hashlib import sha256
 from typing import TypedDict, Final
 from datetime import datetime
-
-from urllib.parse import urlparse
-import requests
-from requests import Response
+from build_transaction import Transaction, create_transaction
 
 TARGET_ZEROS: Final = '0000'
 INITIAL_PREV_BLOCK_HASH: Final = '0'
 INITIAL_BLOCK_NONCE: Final = 1
-
-SUCCESS_REQUEST_STATUS: Final = 200
 BLOCK_REWARD: Final = 1
 
 
 # Build blockchain
-class Transaction(TypedDict):
-    sender: str
-    receiver: str
-    amount: float
-
-
 class Block(TypedDict):
     timestamp: str
     height: int
@@ -49,7 +38,7 @@ def hash_block(block: Block) -> str:
 
 
 def is_chain_valid(chain: list[Block]) -> bool:
-    """ Validates the entire blockchain
+    """ Validates the entire chain
     :param chain: blockchain
     :return: boolean validation result
     """
@@ -115,65 +104,17 @@ def create_block(blockchain_length: int,
             }
 
 
-def create_blockchain(node_address: str, miner_name: str) -> list[Block]:
-    """ Creates a new blockchain with genesis block
+def create_chain(node_address: str, miner_address: str) -> list[Block]:
+    """ Creates a new chain with genesis block
     :param node_address: node address
-    :return: blockchain
+    :param miner_address: miner address
+    :return: chain
     """
-    new_blockchain: list[Block] = []
-    coinbase_transaction: Transaction = create_transaction(node_address, miner_name, BLOCK_REWARD)
-    genesis_block: Block = create_block(len(new_blockchain),
+    new_chain: list[Block] = []
+    coinbase_transaction: Transaction = create_transaction(node_address, miner_address, BLOCK_REWARD)
+    genesis_block: Block = create_block(len(new_chain),
                                         INITIAL_PREV_BLOCK_HASH,
                                         INITIAL_BLOCK_NONCE,
                                         [coinbase_transaction])
-    new_blockchain.append(genesis_block)
-    return new_blockchain
-
-
-# TODO: Transaction stuff
-def create_transaction(sender: str, receiver: str, amount: float) -> Transaction:
-    """ Creates a new transaction with data
-    :param sender: transaction sender
-    :param receiver: transaction receiver
-    :param amount: transaction amount
-    :return: new transaction
-    """
-    return {'sender': sender,
-            'receiver': receiver,
-            'amount': amount
-            }
-
-
-def create_node(url: str) -> str:
-    """ Creates a node netloc from a url address
-    :param url: url address
-    :return: node netloc
-    """
-    parsed_url = urlparse(url)
-    return parsed_url.netloc
-
-
-def find_longest_chain(current_chain: list[Block], chain_nodes: list[str]) -> tuple[bool, list[Block]]:
-    """ Find longest chain in all nodes
-    :param current_chain: current blockchain
-    :param chain_nodes: all present nodes
-    :return: find status & longest chain
-    """
-    longest_chain: list[Block] | None = None
-    max_chain_length: int = len(current_chain)
-
-    for node in chain_nodes:
-        # TODO: protocol?
-        response: Response = requests.get(f'http://{node}/get_blockchain')
-
-        if response.status_code == SUCCESS_REQUEST_STATUS:
-            node_chain_length: int = response.json()['length']
-            node_chain: list[Block] = response.json()['blockchain']
-
-            if node_chain_length > max_chain_length and is_chain_valid(node_chain):
-                max_chain_length = node_chain_length
-                longest_chain = node_chain
-
-    if longest_chain:
-        return True, longest_chain
-    return False, longest_chain
+    new_chain.append(genesis_block)
+    return new_chain
