@@ -1,9 +1,11 @@
 from typing import TypedDict, Final
 from flask import Flask, jsonify, request
-from blockchain import SUCCESS_REQUEST_STATUS, MINER_NAME, BLOCK_REWARD, Transaction, Block, create_blockchain,\
-    create_block, proof_of_work, is_chain_valid, hash_block, create_transaction, create_node, find_longest_chain
-from uuid import uuid4
+from blockchain import SUCCESS_REQUEST_STATUS, BLOCK_REWARD, Transaction, Block, create_blockchain, create_block,\
+    proof_of_work, is_chain_valid, hash_block, create_transaction, create_node, find_longest_chain
 
+NODE_PORT: Final = 5001
+MINER_ADDRESS: Final = f'Miner:{NODE_PORT}'
+NODE_ADDRESS: Final = f'Node:{NODE_PORT}'
 BLOCK_TRANSACTIONS: Final = 10
 TRANSACTION_KEYS = ['sender', 'receiver', 'amount']
 BAD_REQUEST_STATUS: Final = 400
@@ -24,8 +26,8 @@ app = Flask(__name__)
 
 # TODO: each node has its own address & mempool
 # Create first node address, blockchain, mempool, nodes
-node_address: str = str(uuid4()).replace('-', '')
-blockchain: list[Block] = create_blockchain(node_address)
+
+blockchain: list[Block] = create_blockchain(NODE_ADDRESS, MINER_ADDRESS)
 blockchain_mempool: list[Transaction] = []
 blockchain_nodes: list[str] = []
 
@@ -33,19 +35,22 @@ blockchain_nodes: list[str] = []
 # Mine a new block
 @app.route('/mine_block', methods=['GET'])
 def mine_block():
-    global blockchain_mempool
+    # Compute prev block hash & new block nonce
+    global blockchain, blockchain_mempool
     prev_block: Block = blockchain[-1]
     prev_block_nonce: int = prev_block['nonce']
     new_block_nonce: int = proof_of_work(prev_block_nonce)
     prev_block_hash: str = hash_block(prev_block)
-
-    coinbase_transaction: Transaction = create_transaction(node_address, MINER_NAME, BLOCK_REWARD)
+    # Select new block transactions
+    coinbase_transaction: Transaction = create_transaction(NODE_ADDRESS, MINER_ADDRESS, BLOCK_REWARD)
     block_transactions = [coinbase_transaction]
     block_transactions.extend(blockchain_mempool[:BLOCK_TRANSACTIONS])
-
+    # Create new block & add it to chain
     new_block: Block = create_block(len(blockchain), prev_block_hash, new_block_nonce, block_transactions)
     blockchain.append(new_block)
+    # Remove mined transactions from mempool
     blockchain_mempool = blockchain_mempool[BLOCK_TRANSACTIONS:]
+    # TODO: Sync all chains with the longest chain
 
     return jsonify(new_block), SUCCESS_REQUEST_STATUS
 
@@ -96,12 +101,12 @@ def connect_nodes():
         new_nodes: list[str] = [create_node(node_url) for node_url in node_urls]
         blockchain_nodes.extend(new_nodes)
         blockchain_nodes = list(set(blockchain_nodes))
-        return jsonify(new_nodes), SUCCESS_REQUEST_STATUS
+        return jsonify(blockchain_nodes), SUCCESS_REQUEST_STATUS
     else:
         return 'Nodes data is invalid', BAD_REQUEST_STATUS
 
 
-# Replace chain
+# Replace current chain with the logest chain
 @app.route('/replace_chain', methods=['GET'])
 def replace_chain():
     global blockchain
@@ -109,11 +114,12 @@ def replace_chain():
 
     if is_chain_replaced:
         blockchain = longest_chain
-        response: ReplaceBlockchainResponse = {'message': 'The chain was replaced', 'new_chain': blockchain}
+        response: ReplaceBlockchainResponse = {'message': 'The current chain was replaced', 'new_chain': blockchain}
     else:
-        response: ReplaceBlockchainResponse = {'message': 'The chain is the largest', 'new_chain': None}
+        response: ReplaceBlockchainResponse = {'message': 'The current chain is the largest', 'new_chain': None}
     return jsonify(response), SUCCESS_REQUEST_STATUS
 
 
 # Run flask app
-app.run()
+# TODO: run app an all nodes
+app.run(host='0.0.0.0', port=NODE_PORT)

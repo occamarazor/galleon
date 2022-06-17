@@ -12,7 +12,6 @@ INITIAL_PREV_BLOCK_HASH: Final = '0'
 INITIAL_BLOCK_NONCE: Final = 1
 
 SUCCESS_REQUEST_STATUS: Final = 200
-MINER_NAME: Final = 'Miner'
 BLOCK_REWARD: Final = 1
 
 
@@ -116,13 +115,13 @@ def create_block(blockchain_length: int,
             }
 
 
-def create_blockchain(node_address: str) -> list[Block]:
+def create_blockchain(node_address: str, miner_name: str) -> list[Block]:
     """ Creates a new blockchain with genesis block
     :param node_address: node address
     :return: blockchain
     """
     new_blockchain: list[Block] = []
-    coinbase_transaction: Transaction = create_transaction(node_address, MINER_NAME, BLOCK_REWARD)
+    coinbase_transaction: Transaction = create_transaction(node_address, miner_name, BLOCK_REWARD)
     genesis_block: Block = create_block(len(new_blockchain),
                                         INITIAL_PREV_BLOCK_HASH,
                                         INITIAL_BLOCK_NONCE,
