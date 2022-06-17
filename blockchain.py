@@ -10,9 +10,8 @@ from requests import Response
 TARGET_ZEROS: Final = '0000'
 INITIAL_PREV_BLOCK_HASH: Final = '0'
 INITIAL_BLOCK_NONCE: Final = 1
-SUCCESS_REQUEST_STATUS: Final = 200
-BAD_REQUEST_STATUS: Final = 400
 
+SUCCESS_REQUEST_STATUS: Final = 200
 MINER_NAME: Final = 'Miner'
 BLOCK_REWARD: Final = 1
 
@@ -124,7 +123,10 @@ def create_blockchain(node_address: str) -> list[Block]:
     """
     new_blockchain: list[Block] = []
     coinbase_transaction: Transaction = create_transaction(node_address, MINER_NAME, BLOCK_REWARD)
-    genesis_block: Block = create_block(len(new_blockchain), INITIAL_PREV_BLOCK_HASH, INITIAL_BLOCK_NONCE, [coinbase_transaction])
+    genesis_block: Block = create_block(len(new_blockchain),
+                                        INITIAL_PREV_BLOCK_HASH,
+                                        INITIAL_BLOCK_NONCE,
+                                        [coinbase_transaction])
     new_blockchain.append(genesis_block)
     return new_blockchain
 
@@ -152,11 +154,11 @@ def create_node(url: str) -> str:
     return parsed_url.netloc
 
 
-def replace_chain(current_chain: list[Block], chain_nodes: set[str]) -> tuple[bool, list[Block]]:
-    """ Gets longest chain from all nodes
+def find_longest_chain(current_chain: list[Block], chain_nodes: list[str]) -> tuple[bool, list[Block]]:
+    """ Find longest chain in all nodes
     :param current_chain: current blockchain
-    :param chain_nodes: current blockchain nodes
-    :return: replace status & current blockchain longest chain
+    :param chain_nodes: all present nodes
+    :return: find status & longest chain
     """
     longest_chain: list[Block] | None = None
     max_chain_length: int = len(current_chain)
