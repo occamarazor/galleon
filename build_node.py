@@ -1,7 +1,6 @@
 from typing import TypedDict
 import requests
 from requests import Response, RequestException
-
 from common import NODE_PORTS, SUCCESS_REQUEST_STATUS
 from build_blockchain import Block, create_chain
 from build_transaction import Transaction
@@ -21,17 +20,18 @@ def create_node(node_port: int) -> Node:
     """
     node_address: str = f'Node:{node_port}'
     miner_address: str = f'Miner:{node_port}'
-    node_chain = create_chain(node_address, miner_address)
+    node_chain: list[Block] = create_chain(node_address, miner_address)
     return {'port': node_port, 'mempool': [], 'chain': node_chain}
 
 
-def sync_mempools(node_port: int, node_mempool: list[Transaction]) -> list[int]:
+def sync_nodes(node_port: int, node_mempool: list[Transaction], node_chain: list[Block]=None) -> list[int]:
+    new_node_data = {'mempool': node_mempool, 'chain': node_chain}
     updated_nodes: list[int] = []
     # TODO: exclude current node
     print(f'Current node: Node:{node_port}')
     for node_port in NODE_PORTS:
         try:
-            response: Response = requests.post(f'http://127.0.0.1:{node_port}/update_mempool', json=node_mempool)
+            response: Response = requests.post(f'http://127.0.0.1:{node_port}/update_node', json=new_node_data)
 
             if response.status_code == SUCCESS_REQUEST_STATUS:
                 updated_nodes.append(node_port)
