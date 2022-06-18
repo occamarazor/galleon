@@ -1,5 +1,11 @@
 {
-  "sender": "Dan",
-  "receiver": "Max",
-  "amount": 1.2
+  "inputs": [
+    {"sender": "Dan", "amount": 50.71},
+    {"sender": "Bob", "amount": 30.53},
+    {"sender": "Stan", "amount": 20.17}
+  ],
+  "outputs": [
+    {"receiver": "Max", "amount": 10.58},
+    {"receiver": "Myself", "amount": 90.83}
+  ]
 }

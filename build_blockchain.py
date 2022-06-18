@@ -2,12 +2,12 @@ import json
 from hashlib import sha256
 from typing import TypedDict, Final
 from datetime import datetime
-from build_transaction import Transaction, create_transaction
+from build_transaction import Transaction, create_coinbase_transaction
 
 TARGET_ZEROS: Final = '0000'
 INITIAL_PREV_BLOCK_HASH: Final = '0'
 INITIAL_BLOCK_NONCE: Final = 1
-BLOCK_REWARD: Final = 1
+BLOCK_REWARD: Final = 1.1
 
 
 # Build blockchain
@@ -37,7 +37,7 @@ def hash_block(block: Block) -> str:
     return sha256(encoded_block).hexdigest()
 
 
-def is_chain_valid(chain: list[Block]) -> bool:
+def validate_chain(chain: list[Block]) -> bool:
     """ Validates the entire chain
     :param chain: blockchain
     :return: boolean validation result
@@ -111,7 +111,7 @@ def create_chain(node_address: str, miner_address: str) -> list[Block]:
     :return: chain
     """
     new_chain: list[Block] = []
-    coinbase_transaction: Transaction = create_transaction(node_address, miner_address, BLOCK_REWARD)
+    coinbase_transaction: Transaction = create_coinbase_transaction(node_address, miner_address, BLOCK_REWARD)
     genesis_block: Block = create_block(len(new_chain),
                                         INITIAL_PREV_BLOCK_HASH,
                                         INITIAL_BLOCK_NONCE,
