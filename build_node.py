@@ -23,10 +23,16 @@ def create_node(node_port: int) -> Node:
     node_chain: list[Block] = create_chain(node_address, miner_address)
     return {'port': node_port, 'mempool': [], 'chain': node_chain}
 
-def sync_nodes(node_port: int, node_prop: list[Transaction] | list[Block], update_route: str, function_name: str) -> list[int]:
+
+def sync_nodes(node_port: int,
+               node_prop: list[Transaction] | list[Block],
+               update_route: str,
+               function_name: str) -> list[int]:
     """ Syncs a specific node prop instances
     :param node_port: current node port
     :param node_prop: current node mempool or chain
+    :param update_route: API route for prop update
+    :param function_name: function using sync_nodes
     :return: updated nodes
     """
     updated_nodes: list[int] = []

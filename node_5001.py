@@ -35,7 +35,7 @@ def create_app(node_port: int) -> None:
     def add_transaction():
         transaction_json: Transaction = request.get_json()
         # Validate transaction
-        is_transaction_valid = validate_transaction(transaction_json)
+        is_transaction_valid: bool = validate_transaction(transaction_json)
 
         if is_transaction_valid:
             # Update node mempool
@@ -63,7 +63,7 @@ def create_app(node_port: int) -> None:
         prev_block_hash: str = hash_block(prev_block)
         # Select new block transactions
         coinbase_transaction: Transaction = create_coinbase_transaction(node_address, miner_address, BLOCK_REWARD)
-        block_transactions = [coinbase_transaction]
+        block_transactions: list[Transaction] = [coinbase_transaction]
         block_transactions.extend(node['mempool'][:BLOCK_TRANSACTIONS])
         # Create new block & add it to chain
         new_block: Block = create_block(len(node['chain']), prev_block_hash, new_block_nonce, block_transactions)
@@ -81,7 +81,7 @@ def create_app(node_port: int) -> None:
     def update_mempools():
         mempool_json: list[Transaction] = request.get_json()
         # Validate mempool
-        is_mempool_valid = validate_mempool(mempool_json)
+        is_mempool_valid: bool = validate_mempool(mempool_json)
 
         if is_mempool_valid:
             node['mempool'] = mempool_json
