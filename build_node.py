@@ -1,8 +1,9 @@
 from typing import TypedDict
 import requests
-from requests import Response
+from requests import Response, RequestException
+
 from common import NODE_PORTS, SUCCESS_REQUEST_STATUS
-from build_blockchain import Block, create_chain, is_chain_valid
+from build_blockchain import Block, create_chain
 from build_transaction import Transaction
 
 
@@ -13,28 +14,29 @@ class Node(TypedDict):
     chain: list[Block]
 
 
-def create_node(port: int) -> Node:
-    node_address: str = f'Node:{port}'
-    miner_address: str = f'Miner:{port}'
+def create_node(node_port: int) -> Node:
+    """ Creates a new node with data
+    :param node_port: node port
+    :return: new node
+    """
+    node_address: str = f'Node:{node_port}'
+    miner_address: str = f'Miner:{node_port}'
     node_chain = create_chain(node_address, miner_address)
-    return {'port': port, 'mempool': [], 'chain': node_chain}
+    return {'port': node_port, 'mempool': [], 'chain': node_chain}
 
 
-def find_longest_chain(current_chain: list[Block]) -> tuple[bool, list[Block]]:
-    longest_chain: list[Block] | None = None
-    max_chain_length: int = len(current_chain)
-
+def sync_mempools(node_port: int, node_mempool: list[Transaction]) -> list[int]:
+    updated_nodes: list[int] = []
+    # TODO: exclude current node
+    print(f'Current node: Node:{node_port}')
     for node_port in NODE_PORTS:
-        response: Response = requests.get(f'http://127.0.0.1:{node_port}/get_chain')
+        try:
+            response: Response = requests.post(f'http://127.0.0.1:{node_port}/update_mempool', json=node_mempool)
 
-        if response.status_code == SUCCESS_REQUEST_STATUS:
-            node_chain_length: int = response.json()['length']
-            node_chain: list[Block] = response.json()['chain']
+            if response.status_code == SUCCESS_REQUEST_STATUS:
+                updated_nodes.append(node_port)
+        except RequestException as err:
+            print(f'Node Request Error: node:{node_port} unavailable')
+            print(repr(err))
 
-            if node_chain_length > max_chain_length and is_chain_valid(node_chain):
-                max_chain_length = node_chain_length
-                longest_chain = node_chain
-
-    if longest_chain:
-        return True, longest_chain
-    return False, longest_chain
+    return updated_nodes

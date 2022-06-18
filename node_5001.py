@@ -1,41 +1,30 @@
-from typing import TypedDict, Final
+from typing import TypedDict
 from flask import Flask, jsonify, request
 from common import NODE_PORTS, NODE_HOST, BLOCK_TRANSACTIONS, TRANSACTION_KEYS, SUCCESS_REQUEST_STATUS,\
     BAD_REQUEST_STATUS
-from build_node import Node, create_node, find_longest_chain
+from build_node import Node, create_node, sync_mempools
 from build_blockchain import BLOCK_REWARD, Block, proof_of_work, hash_block, create_block, is_chain_valid
 from build_transaction import Transaction, create_transaction
 
 
-class GetChainResponse(TypedDict):
-    chain: list[Block]
-    length: int
-
-
-class ReplaceBlockchainResponse(TypedDict):
-    message: str
-    new_chain: list[Block] | None
+class AddTransactionResponse(TypedDict):
+    new_transaction: Transaction
+    updated_nodes: list[int]
 
 
 def create_app(node_port: int) -> None:
-    node: Node = create_node(node_port)
-
     # Create webapp
     app = Flask(__name__)
+
+    # Create node
+    node: Node = create_node(node_port)
 
     # Request node
     @app.route('/get_node', methods=['GET'])
     def get_node():
         return jsonify(node), SUCCESS_REQUEST_STATUS
 
-    # Request node chain
-    @app.route('/get_chain', methods=['GET'])
-    def get_chain():
-        node_chain: list[Block] = node['chain']
-        response: GetChainResponse = {'chain': node_chain, 'length': len(node_chain)}
-        return jsonify(response), SUCCESS_REQUEST_STATUS
-
-    # Validate chain
+    # Validate node chain
     @app.route('/validate_chain', methods=['GET'])
     def validate_chain():
         is_blockchain_valid: bool = is_chain_valid(node['chain'])
@@ -46,22 +35,27 @@ def create_app(node_port: int) -> None:
             response: str = 'Chain invalid'
         return response, SUCCESS_REQUEST_STATUS
 
-    # Adds transaction to mempool
+    # Add new transaction to mempool
     @app.route('/add_transaction', methods=['POST'])
     def add_transaction():
-        transactions_json = request.get_json()
+        transaction_json: Transaction = request.get_json()
 
-        if all(key in transactions_json for key in TRANSACTION_KEYS):
-            transaction: Transaction = create_transaction(transactions_json['sender'],
-                                                          transactions_json['receiver'],
-                                                          transactions_json['amount'])
+        # TODO: validate transaction
+        if all(key in transaction_json for key in TRANSACTION_KEYS):
+            transaction: Transaction = create_transaction(transaction_json['sender'],
+                                                          transaction_json['receiver'],
+                                                          transaction_json['amount'])
+            # Update node mempool
             node['mempool'].append(transaction)
-            # TODO: Sync all mempools
-            return jsonify(transaction), SUCCESS_REQUEST_STATUS
+            # Sync all mempool instances
+            updated_nodes: list[int] = sync_mempools(node['port'], node['mempool'])
+            # Return add_transaction response
+            response: AddTransactionResponse = {'new_transaction': transaction, 'updated_nodes': updated_nodes}
+            return jsonify(response), SUCCESS_REQUEST_STATUS
         else:
             return 'Transaction data is invalid', BAD_REQUEST_STATUS
 
-    # Mine a new block
+    # Mine new block
     @app.route('/mine_block', methods=['GET'])
     def mine_block():
         node_address: str = f'Node:{node_port}'
@@ -81,22 +75,20 @@ def create_app(node_port: int) -> None:
         node['chain'].append(new_block)
         # Remove mined transactions from mempool
         node['mempool'] = node['mempool'][BLOCK_TRANSACTIONS:]
-        # TODO: Sync all mempools
-        # TODO: Sync all chains
-
+        # TODO: Sync all mempool instances
+        # TODO: Sync all chain instances
+        # Return new_block response
         return jsonify(new_block), SUCCESS_REQUEST_STATUS
 
-    # Replace current chain with the logest chain
-    @app.route('/replace_chain', methods=['GET'])
-    def replace_chain():
-        is_chain_replaced, longest_chain = find_longest_chain(node['chain'])
+    # Update mempool with the latest instance
+    @app.route('/update_mempool', methods=['POST'])
+    def update_mempool():
+        mempool_json: list[Transaction] = request.get_json()
+        # TODO: validate mempool
+        node['mempool'] = mempool_json
+        print(f'Node:{node["port"]} mempool updated: {node["mempool"]}')
 
-        if is_chain_replaced:
-            node['chain'] = longest_chain
-            response: ReplaceBlockchainResponse = {'message': 'The current chain was replaced', 'new_chain': node['chain']}
-        else:
-            response: ReplaceBlockchainResponse = {'message': 'The current chain is the largest', 'new_chain': None}
-        return jsonify(response), SUCCESS_REQUEST_STATUS
+        return jsonify(node['mempool']), SUCCESS_REQUEST_STATUS
 
     # Run flask app
     app.run(host=NODE_HOST, port=node_port)
