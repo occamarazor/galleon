@@ -1,5 +1,5 @@
-from typing import TypedDict
 import requests
+from typing import TypedDict
 from requests import Response, RequestException
 from common import NODE_PORTS, SUCCESS_REQUEST_STATUS
 from build_blockchain import Block, create_chain

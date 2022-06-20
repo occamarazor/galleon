@@ -2,7 +2,7 @@ from typing import TypedDict
 from flask import Flask, jsonify, request
 from common import NODE_PORTS, NODE_HOST, BLOCK_TRANSACTIONS, SUCCESS_REQUEST_STATUS, BAD_REQUEST_STATUS
 from build_node import Node, create_node, sync_mempools, sync_chains
-from build_blockchain import BLOCK_REWARD, Block, proof_of_work, hash_block, create_block, validate_chain
+from build_blockchain import BLOCK_REWARD, Block, create_initial_block, proof_of_work, update_block, validate_chain
 from build_transaction import Transaction, create_coinbase_transaction, validate_transaction, validate_mempool
 
 NODE_PORT = NODE_PORTS[0]
@@ -55,18 +55,20 @@ def create_app(node_port: int) -> None:
     def mine_block():
         node_address: str = f'Node:{node_port}'
         miner_address: str = f'Miner:{node_port}'
-
-        # Compute prev block hash & new block nonce
+        # Get prev block hash
         prev_block: Block = node['chain'][-1]
-        prev_block_nonce: int = prev_block['nonce']
-        new_block_nonce: int = proof_of_work(prev_block_nonce)
-        prev_block_hash: str = hash_block(prev_block)
+        prev_block_hash: str = prev_block['hash']
         # Select new block transactions
         coinbase_transaction: Transaction = create_coinbase_transaction(node_address, miner_address, BLOCK_REWARD)
         block_transactions: list[Transaction] = [coinbase_transaction]
         block_transactions.extend(node['mempool'][:BLOCK_TRANSACTIONS])
-        # Create new block & add it to chain
-        new_block: Block = create_block(len(node['chain']), prev_block_hash, new_block_nonce, block_transactions)
+        # Create new initial block
+        new_initial_block: Block = create_initial_block(len(node['chain']), prev_block_hash, block_transactions)
+        # Compute new block hash & nonce
+        new_block_hash, new_block_nonce = proof_of_work(new_initial_block)
+        # Update new initial block with hash & nonce
+        new_block: Block = update_block(new_initial_block, new_block_hash, new_block_nonce)
+        # Add new block to chain
         node['chain'].append(new_block)
         # Remove mined transactions from mempool
         node['mempool'] = node['mempool'][BLOCK_TRANSACTIONS:]
@@ -80,9 +82,9 @@ def create_app(node_port: int) -> None:
     @app.route('/update_mempools', methods=['POST'])
     def update_mempools():
         mempool_json: list[Transaction] = request.get_json()
-        # Validate mempool
         is_mempool_valid: bool = validate_mempool(mempool_json)
 
+        # Validate mempool
         if is_mempool_valid:
             node['mempool'] = mempool_json
             print(f'Node:{node["port"]} mempool updated: {node["mempool"]}')
@@ -94,8 +96,10 @@ def create_app(node_port: int) -> None:
     @app.route('/update_chains', methods=['POST'])
     def update_chains():
         chain_json: list[Block] = request.get_json()
+        is_chain_valid = validate_chain(chain_json)
+
         # Validate chain
-        if chain_json and validate_chain(chain_json):
+        if is_chain_valid:
             node['chain'] = chain_json
             print(f'Node:{node["port"]} chain updated: {node["chain"]}')
             return jsonify(node['chain']), SUCCESS_REQUEST_STATUS
