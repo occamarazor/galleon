@@ -28,7 +28,7 @@ def sync_nodes(node_port: int,
                node_prop: list[Transaction] | list[Block],
                update_route: str,
                function_name: str) -> list[int]:
-    """ Syncs a specific node prop instances
+    """ Syncs a specific node prop instance
     :param node_port: current node port
     :param node_prop: current node mempool or chain
     :param update_route: API route for prop update

@@ -2,7 +2,8 @@ from typing import TypedDict
 from flask import Flask, jsonify, request
 from common import NODE_PORTS, NODE_HOST, BLOCK_TRANSACTIONS, SUCCESS_REQUEST_STATUS, BAD_REQUEST_STATUS
 from build_node import Node, create_node, sync_mempools, sync_chains
-from build_blockchain import BLOCK_REWARD, Block, create_initial_block, proof_of_work, update_block, validate_chain
+from build_blockchain import BLOCK_REWARD, InitialBlock, Block, create_initial_block, proof_of_work,\
+    compute_initial_block_target, compute_initial_block_difficulty, update_initial_block, validate_chain
 from build_transaction import Transaction, create_coinbase_transaction, validate_transaction, validate_mempool
 
 NODE_PORT = NODE_PORTS[0]
@@ -62,12 +63,16 @@ def create_app(node_port: int) -> None:
         coinbase_transaction: Transaction = create_coinbase_transaction(node_address, miner_address, BLOCK_REWARD)
         block_transactions: list[Transaction] = [coinbase_transaction]
         block_transactions.extend(node['mempool'][:BLOCK_TRANSACTIONS])
-        # Create new initial block
-        new_initial_block: Block = create_initial_block(len(node['chain']), prev_block_hash, block_transactions)
+        # Create initial block
+        initial_block: InitialBlock = create_initial_block(len(node['chain']), prev_block_hash, block_transactions)
+        # Compute initial block target
+        initial_block_target: str = compute_initial_block_target(initial_block['bits'])
         # Compute new block hash & nonce
-        new_block_hash, new_block_nonce = proof_of_work(new_initial_block)
+        new_block_hash, new_block_nonce = proof_of_work(initial_block, initial_block_target)
+        # Compute new block difficulty
+        new_block_difficulty: float = compute_initial_block_difficulty(initial_block_target)
         # Update new initial block with hash & nonce
-        new_block: Block = update_block(new_initial_block, new_block_hash, new_block_nonce)
+        new_block: Block = update_initial_block(initial_block, new_block_hash, new_block_nonce, new_block_difficulty)
         # Add new block to chain
         node['chain'].append(new_block)
         # Remove mined transactions from mempool
@@ -78,7 +83,8 @@ def create_app(node_port: int) -> None:
         response: MineBlockResponse = {'new_block': new_block, 'updated_chains': updated_chains}
         return jsonify(response), SUCCESS_REQUEST_STATUS
 
-    # Internal route: Update node mempools with the latest mempool
+    # TODO: consensus route for indirect use
+    # Update node mempools with the latest mempool
     @app.route('/update_mempools', methods=['POST'])
     def update_mempools():
         mempool_json: list[Transaction] = request.get_json()
@@ -92,7 +98,8 @@ def create_app(node_port: int) -> None:
         else:
             return 'Mempool invalid', BAD_REQUEST_STATUS
 
-    # Internal route: Update node chains with the latest chain
+    # TODO: consensus route for indirect use
+    # Update node chains with the latest chain
     @app.route('/update_chains', methods=['POST'])
     def update_chains():
         chain_json: list[Block] = request.get_json()
