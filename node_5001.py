@@ -28,17 +28,17 @@ def create_app(node_port: int) -> None:
     def get_node():
         return jsonify(node), SUCCESS_REQUEST_STATUS
 
-    # Add new transaction to mempool
+    # Add new transaction to node mempool
     @app.route('/add_transaction', methods=['POST'])
     def add_transaction():
         new_transaction_json: InitialTransaction = request.get_json()
-
+        # Create transaction with ID
         new_transaction: Transaction = create_transaction(new_transaction_json)
         # Validate transaction
         is_new_transaction_valid: bool = validate_transaction(new_transaction)
 
         if is_new_transaction_valid:
-            # Update node mempool
+            # Add new transaction to mempool
             node['mempool'].append(new_transaction)
             # Return add_transaction response
             return jsonify(new_transaction), SUCCESS_REQUEST_STATUS
@@ -58,7 +58,6 @@ def create_app(node_port: int) -> None:
         block_transactions: list[Transaction] = [coinbase_transaction]
         block_transactions.extend(node['mempool'][:MAX_BLOCK_TRANSACTIONS])
         # Create initial block
-        # TODO: prev_block_height & prev_block_hash instead of chain len
         initial_block: InitialBlock = create_initial_block(len(node['chain']), prev_block_hash, block_transactions)
         # Compute initial block target
         initial_block_target: str = compute_initial_block_target(initial_block['bits'])
@@ -66,7 +65,7 @@ def create_app(node_port: int) -> None:
         new_block_hash, new_block_nonce = proof_of_work(initial_block, initial_block_target)
         # Compute new block difficulty
         new_block_difficulty: float = compute_initial_block_difficulty(initial_block_target)
-        # Update new initial block with hash & nonce
+        # Update initial block with hash, nonce & difficulty
         new_block: Block = update_initial_block(initial_block, new_block_hash, new_block_nonce, new_block_difficulty)
         # Add new block to chain
         # TODO: exclude current node
@@ -81,28 +80,29 @@ def create_app(node_port: int) -> None:
         response: MineBlockResponse = {'new_block': new_block, 'updated_nodes': updated_nodes}
         return jsonify(response), SUCCESS_REQUEST_STATUS
 
-    # Add new block to chain, remove block transactions from mempool
-    @app.route('/update_nodes', methods=['POST'])
-    def update_nodes():
+    # Add new block to chain
+    @app.route('/add_block', methods=['POST'])
+    def add_block():
         prev_block: Block = node['chain'][-1]
         prev_block_hash: str = prev_block['hash']
-        new_block_json: Block = request.get_json()
-        is_new_block_valid = validate_block(prev_block_hash, new_block_json)
-
+        new_block: Block = request.get_json()
         # Validate new mined block
+        is_new_block_valid = validate_block(prev_block_hash, new_block)
+
         if is_new_block_valid:
             # Add new block to chain
-            node['chain'].append(new_block_json)
+            node['chain'].append(new_block)
             # Remove block transactions from mempool
-            block_transactions_ids: list[str] = list(map(lambda t: t['id'], new_block_json['transactions']))[1:]
+            block_transactions_ids: list[str] = list(map(lambda t: t['id'], new_block['transactions']))[1:]
             node['mempool'] = list(filter(lambda t: t['id'] not in block_transactions_ids, node['mempool']))
             # Log node updates
             print(f'Node:{node["port"]} chain updated with new block:')
-            pprint(new_block_json)
+            pprint(new_block)
             print(f'Node:{node["port"]} mempool cleared of transactions: {block_transactions_ids}')
-            return jsonify(new_block_json), SUCCESS_REQUEST_STATUS
+            return jsonify(new_block), SUCCESS_REQUEST_STATUS
         else:
-            print(f'Node:{node["port"]} chain update failed, new block invalid: {new_block_json}')
+            print(f'Node:{node["port"]} chain update failed, new block invalid:')
+            pprint(new_block)
             return 'New block invalid', BAD_REQUEST_STATUS
 
     # Run flask app

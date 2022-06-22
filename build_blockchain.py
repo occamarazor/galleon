@@ -142,12 +142,12 @@ def update_initial_block(initial_block: InitialBlock,
                          new_block_hash: str,
                          new_block_nonce: int,
                          new_block_difficulty: float) -> Block:
-    """ Updates block with new hash, nonce & difficulty
+    """ Updates initial block with new hash, nonce & difficulty
     :param initial_block: initial block
     :param new_block_hash: new block hash
     :param new_block_nonce: new block nonce
     :param new_block_difficulty: new block difficulty
-    :return: block updated with new hash & nonce
+    :return: new block with hash, nonce & difficulty
     """
     new_block: Block = {k: v for k, v in initial_block.items()}
     new_block['hash'] = new_block_hash

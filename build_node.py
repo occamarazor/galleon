@@ -36,7 +36,7 @@ def broadcast_block(broadcast_node: int, new_block: Block) -> list[int]:
 
     for node_port in NODE_PORTS:
         try:
-            response: Response = requests.post(f'http://127.0.0.1:{node_port}/update_nodes', json=new_block)
+            response: Response = requests.post(f'http://127.0.0.1:{node_port}/add_block', json=new_block)
 
             if response.status_code == SUCCESS_REQUEST_STATUS:
                 updated_nodes.append(node_port)
