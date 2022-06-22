@@ -1,5 +1,4 @@
 import json
-from pprint import pprint
 from typing import TypedDict, Final
 from datetime import datetime
 from decimal import Decimal
@@ -159,6 +158,7 @@ def update_initial_block(initial_block: InitialBlock,
 
 def validate_block(prev_block_hash: str, new_block: Block) -> bool:
     """ Validates new mined block
+    :param prev_block_hash: pre block hash
     :param new_block: new mined block
     :return: new block validation status
     """

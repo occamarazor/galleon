@@ -1,22 +1,19 @@
+from pprint import pprint
 from typing import TypedDict
 from flask import Flask, jsonify, request
 from common import NODE_PORTS, NODE_HOST, MAX_BLOCK_TRANSACTIONS, SUCCESS_REQUEST_STATUS, BAD_REQUEST_STATUS
-from build_node import Node, create_node, broadcast_transaction, broadcast_block
-from build_blockchain import BLOCK_REWARD, InitialBlock, Block, create_initial_block, proof_of_work,\
+from build_node import Node, create_node, broadcast_block
+from build_blockchain import BLOCK_REWARD, InitialBlock, Block, create_initial_block, proof_of_work, \
     compute_initial_block_target, compute_initial_block_difficulty, update_initial_block, validate_block
-from build_transaction import Transaction, create_coinbase_transaction, validate_transaction
+from build_transaction import InitialTransaction, Transaction, create_coinbase_transaction, create_transaction, \
+    validate_transaction
 
 NODE_PORT = NODE_PORTS[0]
 
 
-class AddTransactionResponse(TypedDict):
-    new_transaction: Transaction
-    updated_mempools: list[int]
-
-
 class MineBlockResponse(TypedDict):
     new_block: Block
-    updated_chains: list[int]
+    updated_nodes: list[int]
 
 
 def create_app(node_port: int) -> None:
@@ -34,21 +31,17 @@ def create_app(node_port: int) -> None:
     # Add new transaction to mempool
     @app.route('/add_transaction', methods=['POST'])
     def add_transaction():
-        new_transaction_json: Transaction = request.get_json()
+        new_transaction_json: InitialTransaction = request.get_json()
+
+        new_transaction: Transaction = create_transaction(new_transaction_json)
         # Validate transaction
-        is_new_transaction_valid: bool = validate_transaction(new_transaction_json)
+        is_new_transaction_valid: bool = validate_transaction(new_transaction)
 
         if is_new_transaction_valid:
             # Update node mempool
-            # TODO: exclude current node
-            # node['mempool'].append(new_transaction_json)
-            # Broadcasts new transaction across network
-            updated_mempools: list[int] = broadcast_transaction(node['port'], new_transaction_json)
+            node['mempool'].append(new_transaction)
             # Return add_transaction response
-            response: AddTransactionResponse = {'new_transaction': new_transaction_json,
-                                                'updated_mempools': updated_mempools
-                                                }
-            return jsonify(response), SUCCESS_REQUEST_STATUS
+            return jsonify(new_transaction), SUCCESS_REQUEST_STATUS
         else:
             return 'Transaction data invalid', BAD_REQUEST_STATUS
 
@@ -78,33 +71,19 @@ def create_app(node_port: int) -> None:
         # Add new block to chain
         # TODO: exclude current node
         # node['chain'].append(new_block)
-        # Remove mined transactions from mempool
+        # Remove block transactions from mempool
         # TODO: exclude current node
-        # node['mempool'] = node['mempool'][MAX_BLOCK_TRANSACTIONS:]
+        # block_transactions_ids: list[str] = list(map(lambda t: t['id'], new_block['transactions']))[1:]
+        # node['mempool'] = list(filter(lambda t: t['id'] not in block_transactions_ids, node['mempool']))
         # Broadcasts new block across network
-        updated_chains: list[int] = broadcast_block(node['port'], new_block)
+        updated_nodes: list[int] = broadcast_block(node['port'], new_block)
         # Return mine_block response
-        response: MineBlockResponse = {'new_block': new_block, 'updated_chains': updated_chains}
+        response: MineBlockResponse = {'new_block': new_block, 'updated_nodes': updated_nodes}
         return jsonify(response), SUCCESS_REQUEST_STATUS
 
-    # TODO: consensus route for indirect use
-    # Update node mempool with new transaction (сonsensus route for indirect use)
-    @app.route('/update_mempool', methods=['POST'])
-    def update_mempool():
-        new_transaction_json: Transaction = request.get_json()
-        is_new_transaction_valid: bool = validate_transaction(new_transaction_json)
-
-        # Validate new transaction
-        if is_new_transaction_valid:
-            node['mempool'].append(new_transaction_json)
-            print(f'Node:{node["port"]} mempool updated with new transaction: {new_transaction_json}')
-            return jsonify(new_transaction_json), SUCCESS_REQUEST_STATUS
-        else:
-            return 'New transaction invalid', BAD_REQUEST_STATUS
-
-    # Update node chains with the latest chain (сonsensus route for indirect use)
-    @app.route('/update_chain', methods=['POST'])
-    def update_chain():
+    # Add new block to chain, remove block transactions from mempool
+    @app.route('/update_nodes', methods=['POST'])
+    def update_nodes():
         prev_block: Block = node['chain'][-1]
         prev_block_hash: str = prev_block['hash']
         new_block_json: Block = request.get_json()
@@ -112,9 +91,15 @@ def create_app(node_port: int) -> None:
 
         # Validate new mined block
         if is_new_block_valid:
+            # Add new block to chain
             node['chain'].append(new_block_json)
-            node['mempool'] = node['mempool'][MAX_BLOCK_TRANSACTIONS:]
-            print(f'Node:{node["port"]} chain updated with new block: {new_block_json}')
+            # Remove block transactions from mempool
+            block_transactions_ids: list[str] = list(map(lambda t: t['id'], new_block_json['transactions']))[1:]
+            node['mempool'] = list(filter(lambda t: t['id'] not in block_transactions_ids, node['mempool']))
+            # Log node updates
+            print(f'Node:{node["port"]} chain updated with new block:')
+            pprint(new_block_json)
+            print(f'Node:{node["port"]} mempool cleared of transactions: {block_transactions_ids}')
             return jsonify(new_block_json), SUCCESS_REQUEST_STATUS
         else:
             print(f'Node:{node["port"]} chain update failed, new block invalid: {new_block_json}')

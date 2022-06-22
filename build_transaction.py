@@ -1,10 +1,12 @@
 from typing import TypedDict
 from decimal import Decimal
 from functools import reduce
+from uuid import uuid4
 
 
 # TODO: miner fees
 # TODO: transactions choice
+# TODO: transactions hash
 # Build transaction
 class TransactionInput(TypedDict):
     sender: str
@@ -16,9 +18,13 @@ class TransactionOutput(TypedDict):
     amount: float
 
 
-class Transaction(TypedDict):
+class InitialTransaction(TypedDict):
     inputs: list[TransactionInput]
     outputs: list[TransactionOutput]
+
+
+class Transaction(InitialTransaction):
+    id: str
 
 
 def create_coinbase_transaction(sender: str, receiver: str, amount: float) -> Transaction:
@@ -26,11 +32,23 @@ def create_coinbase_transaction(sender: str, receiver: str, amount: float) -> Tr
     :param sender: transaction sender
     :param receiver: transaction receiver
     :param amount: transaction amount
-    :return: new transaction
+    :return: new coinbase transaction
     """
-    return {'inputs': [{'sender': sender, 'amount': amount}],
+    return {'id': uuid4().hex,
+            'inputs': [{'sender': sender, 'amount': amount}],
             'outputs': [{'receiver': receiver, 'amount': amount}]
             }
+
+
+def create_transaction(initial_transaction: InitialTransaction) -> Transaction:
+    """ Creates a new transaction with id
+    :param initial_transaction: coinbase transaction
+    :return: new transaction with id
+    """
+    new_transaction: Transaction = {k: v for k, v in initial_transaction.items()}
+    if 'id' not in new_transaction:
+        new_transaction['id'] = uuid4().hex
+    return new_transaction
 
 
 def validate_transaction(new_transaction: Transaction) -> bool:
