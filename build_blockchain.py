@@ -1,4 +1,5 @@
 import json
+from pprint import pprint
 from typing import TypedDict, Final
 from datetime import datetime
 from decimal import Decimal
@@ -8,8 +9,8 @@ from build_transaction import Transaction, create_coinbase_transaction
 BLOCK_REWARD: Final = 1.1
 INITIAL_BLOCK_HASH: Final = '0'
 INITIAL_BLOCK_NONCE: Final = 1
-# TODO: difficulty adjustment
-INITIAL_BITS: int = 509450204  # 4 leading zeros
+# TODO: difficulty adjustment - timer/blocks?
+INITIAL_BLOCK_BITS: int = 509450204  # 4 leading zeros
 MAX_TARGET = '0x00FFFF0000000000000000000000000000000000000000000000000000000000'
 
 
@@ -60,7 +61,7 @@ def create_initial_block(blockchain_length: int, prev_block_hash: str, transacti
             'timestamp': f'{datetime.now()}',
             'prev_hash': prev_block_hash,
             'transactions': transactions,
-            'bits': INITIAL_BITS,
+            'bits': INITIAL_BLOCK_BITS,
             }
 
 
@@ -156,39 +157,28 @@ def update_initial_block(initial_block: InitialBlock,
     return new_block
 
 
-def validate_chain(chain: list[Block]) -> bool:
-    """ Validates the entire chain
-    :param chain: chain
-    :return: chain validation status
+def validate_block(prev_block_hash: str, new_block: Block) -> bool:
+    """ Validates new mined block
+    :param new_block: new mined block
+    :return: new block validation status
     """
-    block_height: int = 1
-
-    if not chain:
+    # Prev & new blocks hashes validation
+    if prev_block_hash != new_block['prev_hash']:
         return False
 
-    # Validate each block
-    while block_height < len(chain):
-        # Prev & current blocks hashes validation
-        prev_block: Block = chain[block_height - 1]
-        current_block: Block = chain[block_height]
+    # New block hash validation
+    initial_block: InitialBlock = downgrade_block_to_initial(new_block)
+    initial_block_target: str = compute_initial_block_target(new_block['bits'])
+    initial_block_hash: str = compute_initial_block_hash(initial_block, new_block['nonce'])
 
-        if prev_block['hash'] != current_block['prev_hash']:
-            return False
+    if new_block['hash'] != initial_block_hash or initial_block_target <= f'0x{initial_block_hash}':
+        return False
 
-        # Current block hash validation
-        initial_block: InitialBlock = strip_block(current_block)
-        initial_block_target: str = compute_initial_block_target(current_block['bits'])
-        initial_block_hash: str = compute_initial_block_hash(initial_block, current_block['nonce'])
-
-        if current_block['hash'] != initial_block_hash and initial_block_target <= initial_block_hash:
-            return False
-
-        block_height += 1
     return True
 
 
-def strip_block(block: Block) -> InitialBlock:
-    """ Strip block down to initial block
+def downgrade_block_to_initial(block: Block) -> InitialBlock:
+    """ Strips block down to initial block
     :param block: block
     :return: initial block
     """

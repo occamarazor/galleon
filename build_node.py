@@ -24,13 +24,31 @@ def create_node(node_port: int) -> Node:
     return {'port': node_port, 'mempool': [], 'chain': node_chain}
 
 
-def sync_nodes(node_port: int,
-               node_prop: list[Transaction] | list[Block],
-               update_route: str,
-               function_name: str) -> list[int]:
-    """ Syncs a specific node prop instance
+def broadcast_transaction(node_port: int, new_transaction: Transaction) -> list[int]:
+    """ Broadcasts new transaction across entire network
     :param node_port: current node port
-    :param node_prop: current node mempool or chain
+    :param new_transaction: new transaction
+    :return: updated nodes
+    """
+    return update_nodes(node_port, new_transaction, 'update_mempool', 'broadcast_transaction')
+
+
+def broadcast_block(node_port: int, new_block: Block) -> list[int]:
+    """ Broadcasts new mined block across entire network
+    :param node_port: current node port
+    :param new_block: new mined block
+    :return: updated nodes
+    """
+    return update_nodes(node_port, new_block, 'update_chain', 'broadcast_block')
+
+
+def update_nodes(node_port: int,
+                 node_prop: Transaction | Block,
+                 update_route: str,
+                 function_name: str) -> list[int]:
+    """ Syncs a specific node prop instances
+    :param node_port: current node port
+    :param node_prop: new transaction or new mined block
     :param update_route: API route for prop update
     :param function_name: function using sync_nodes
     :return: updated nodes
@@ -49,21 +67,3 @@ def sync_nodes(node_port: int,
             print(repr(err))
 
     return updated_nodes
-
-
-def sync_mempools(node_port: int, node_mempool: list[Transaction]) -> list[int]:
-    """ Syncs all mempool instances
-    :param node_port: current node port
-    :param node_mempool: current node mempool
-    :return: updated nodes
-    """
-    return sync_nodes(node_port, node_mempool, 'update_mempools', 'sync_mempools')
-
-
-def sync_chains(node_port: int, node_chain: list[Block]) -> list[int]:
-    """ Syncs all mempool instances
-    :param node_port: current node port
-    :param node_chain: current node chain
-    :return: updated nodes
-    """
-    return sync_nodes(node_port, node_chain, 'update_chains', 'sync_chains')
