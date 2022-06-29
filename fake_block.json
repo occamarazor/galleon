@@ -1,0 +1,53 @@
+{
+    "bits": 509450204,
+    "difficulty": 700.21,
+    "hash": "00001d3ad4afb52a23908151894a5955a9f389e1e5d508a931eeb71b76bfeca2",
+    "height": 2,
+    "nonce": 158758,
+    "prev_hash": "0",
+    "timestamp": "2022-06-29 17:53:21.669030",
+    "transactions": [
+        {
+            "id": "d937ebd1b5014f54a9d6dcea79a8bb5c",
+            "inputs": [
+                {
+                    "amount": 1.1,
+                    "sender": "Node:5001"
+                }
+            ],
+            "outputs": [
+                {
+                    "amount": 1.1,
+                    "receiver": "Miner:5001"
+                }
+            ]
+        },
+        {
+            "id": "7c628bde22a04eb99dc7ee186c6cd065",
+            "inputs": [
+                {
+                    "amount": 50.71,
+                    "sender": "Dan"
+                },
+                {
+                    "amount": 30.53,
+                    "sender": "Bob"
+                },
+                {
+                    "amount": 20.17,
+                    "sender": "Stan"
+                }
+            ],
+            "outputs": [
+                {
+                    "amount": 10.58,
+                    "receiver": "Max"
+                },
+                {
+                    "amount": 90.83,
+                    "receiver": "Myself"
+                }
+            ]
+        }
+    ]
+}
