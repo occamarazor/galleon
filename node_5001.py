@@ -2,7 +2,7 @@ from pprint import pprint
 from typing import TypedDict
 from flask import Flask, jsonify, request
 from common import NODE_PORTS, NODE_HOST, MAX_BLOCK_TRANSACTIONS, SUCCESS_REQUEST_STATUS, BAD_REQUEST_STATUS
-from build_node import Node, create_node, broadcast_block
+from build_node import Node, create_node, broadcast_block, update_node
 from build_blockchain import BLOCK_REWARD, InitialBlock, Block, create_initial_block, proof_of_work, \
     compute_initial_block_target, compute_initial_block_difficulty, update_initial_block, validate_block
 from build_transaction import InitialTransaction, Transaction, create_coinbase_transaction, create_transaction, \
@@ -67,13 +67,8 @@ def create_app(node_port: int) -> None:
         new_block_difficulty: float = compute_initial_block_difficulty(initial_block_target)
         # Update initial block with hash, nonce & difficulty
         new_block: Block = update_initial_block(initial_block, new_block_hash, new_block_nonce, new_block_difficulty)
-        # Add new block to chain
-        # TODO: exclude current node
-        # node['chain'].append(new_block)
-        # Remove block transactions from mempool
-        # TODO: exclude current node
-        # block_transactions_ids: list[str] = list(map(lambda t: t['id'], new_block['transactions']))[1:]
-        # node['mempool'] = list(filter(lambda t: t['id'] not in block_transactions_ids, node['mempool']))
+        # Update node's chain & mempool
+        update_node(node, new_block)
         # Broadcasts new block across network
         updated_nodes: list[int] = broadcast_block(node['port'], new_block)
         # Return mine_block response
@@ -90,15 +85,10 @@ def create_app(node_port: int) -> None:
         is_new_block_valid = validate_block(prev_block_hash, new_block)
 
         if is_new_block_valid:
-            # Add new block to chain
-            node['chain'].append(new_block)
-            # Remove block transactions from mempool
-            block_transactions_ids: list[str] = list(map(lambda t: t['id'], new_block['transactions']))[1:]
-            node['mempool'] = list(filter(lambda t: t['id'] not in block_transactions_ids, node['mempool']))
+            update_node(node, new_block)
             # Log node updates
             print(f'Node:{node["port"]} chain updated with new block:')
             pprint(new_block)
-            print(f'Node:{node["port"]} mempool cleared of transactions: {block_transactions_ids}')
             return jsonify(new_block), SUCCESS_REQUEST_STATUS
         else:
             print(f'Node:{node["port"]} chain update failed, new block invalid:')

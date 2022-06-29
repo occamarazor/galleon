@@ -31,17 +31,29 @@ def broadcast_block(broadcast_node: int, new_block: Block) -> list[int]:
     :return: updated nodes
     """
     updated_nodes: list[int] = []
-    # TODO: exclude current node
-    print(f'Current node: Node:{broadcast_node}')
 
     for node_port in NODE_PORTS:
-        try:
-            response: Response = requests.post(f'http://127.0.0.1:{node_port}/add_block', json=new_block)
+        if node_port != broadcast_node:
+            try:
+                response: Response = requests.post(f'http://127.0.0.1:{node_port}/add_block', json=new_block)
 
-            if response.status_code == SUCCESS_REQUEST_STATUS:
-                updated_nodes.append(node_port)
-        except RequestException as err:
-            print(f'broadcast_block error: node:{node_port} unavailable')
-            print(repr(err))
+                if response.status_code == SUCCESS_REQUEST_STATUS:
+                    updated_nodes.append(node_port)
+            except RequestException as err:
+                print(f'broadcast_block error: node:{node_port} unavailable')
+                print(repr(err))
 
     return updated_nodes
+
+
+def update_node(node: Node, new_block: Block) -> None:
+    """ Updates node's chain & mempool
+    :param node: node
+    :param new_block: new block
+    :return: None
+    """
+    # Add new block to chain
+    node['chain'].append(new_block)
+    # Remove block transactions from mempool
+    block_transactions_ids: list[str] = list(map(lambda t: t['id'], new_block['transactions']))[1:]
+    node['mempool'] = list(filter(lambda t: t['id'] not in block_transactions_ids, node['mempool']))
